@@ -6,7 +6,7 @@ from docling.datamodel.pipeline_options import (
     AcceleratorDevice,
     AcceleratorOptions,
     PdfPipelineOptions,
-    TesseractCliOcrOptions,
+    EasyOcrOptions,
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
 from flask import Flask, request, render_template, send_from_directory, abort
@@ -147,8 +147,14 @@ def extract_markdown_from_pdf(pdf_path, technique):
         pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.ocr_options.use_gpu = False
         pipeline_options.ocr_options.lang = ["en"]
+        pipeline_options.generate_picture_images = True
+        pipeline_options.do_picture_classification = True
+        pipeline_options.do_formula_enrichment = True
+        pipeline_options.images_scale = 1
+        ocr_options = EasyOcrOptions(force_full_page_ocr=True, lang=['en'])
+        pipeline_options.ocr_options = ocr_options
         pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=3, device=AcceleratorDevice.AUTO
+            num_threads=4, device=AcceleratorDevice.CPU
         )
         converter = DocumentConverter(
             format_options={
@@ -173,8 +179,14 @@ def extract_markdown_from_pdf(pdf_path, technique):
         pipeline_options.table_structure_options.do_cell_matching = True
         pipeline_options.ocr_options.use_gpu = False
         pipeline_options.ocr_options.lang = ["en"]
+        pipeline_options.generate_picture_images = True
+        pipeline_options.do_picture_classification = True
+        pipeline_options.do_formula_enrichment = True
+        pipeline_options.images_scale = 1
+        ocr_options = EasyOcrOptions(force_full_page_ocr=True, lang=['en'])
+        pipeline_options.ocr_options = ocr_options
         pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=3, device=AcceleratorDevice.AUTO
+            num_threads=4, device=AcceleratorDevice.CPU
         )
         converter = DocumentConverter(
             format_options={
@@ -182,25 +194,6 @@ def extract_markdown_from_pdf(pdf_path, technique):
             }
         )
         result = converter.convert(image_path)
-        markdown_text = result.document.export_to_markdown()
-        return markdown_text
-
-    elif technique == 'tesseract':
-        pipeline_options = PdfPipelineOptions()
-        pipeline_options.do_ocr = True
-        pipeline_options.do_table_structure = True
-        pipeline_options.table_structure_options.do_cell_matching = True
-        ocr_options = TesseractCliOcrOptions(force_full_page_ocr=True, lang=['en'])
-        pipeline_options.ocr_options = ocr_options
-        pipeline_options.accelerator_options = AcceleratorOptions(
-            num_threads=3, device=AcceleratorDevice.AUTO
-        )
-        converter = DocumentConverter(
-            format_options={
-                InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)
-            }
-        )
-        result = converter.convert(pdf_path)
         markdown_text = result.document.export_to_markdown()
         return markdown_text
 
