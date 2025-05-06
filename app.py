@@ -1,5 +1,9 @@
+import json
 import os
 import tempfile
+import httpx
+from pathlib import Path
+
 
 from docling.datamodel.base_models import InputFormat
 from docling.datamodel.pipeline_options import (
@@ -140,6 +144,31 @@ def extract_markdown_from_pdf(pdf_path, technique):
         markdown_text = result.document.export_to_markdown()
         return markdown_text
 
+    if technique == 'default_docling_serve':
+        file_path = Path(pdf_path)
+
+        files = {
+            "files": (file_path.name, file_path.open("rb"), "application/pdf"),
+        }
+
+        base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
+        payload = {
+            "options": {
+                "to_formats": ["md"],
+                "image_export_mode": "embedded",
+                "do_ocr": True,
+                "abort_on_error": False,
+                "return_as_file": False,
+            },
+        }
+
+        with httpx.Client(timeout=None) as client:
+            response = client.post(
+                base_url, files=files, data={"parameters": json.dumps(payload)}
+            )
+
+        return response.json()["document"]["md_content"]
+
     elif technique == 'easyocr':
         pipeline_options = PdfPipelineOptions()
         pipeline_options.do_ocr = True
@@ -164,6 +193,32 @@ def extract_markdown_from_pdf(pdf_path, technique):
         result = converter.convert(pdf_path)
         markdown_text = result.document.export_to_markdown()
         return markdown_text
+
+    elif technique == 'easyocr_docling_serve':
+        file_path = Path(pdf_path)
+
+        files = {
+            "files": (file_path.name, file_path.open("rb"), "application/pdf"),
+        }
+
+        base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
+        options = {
+            "to_formats": ["md"],
+            "image_export_mode": "embedded",
+            "do_ocr": True,
+            "force_ocr": True,
+            "ocr_engine": "easyocr",
+            "ocr_lang": "en",
+            "abort_on_error": False,
+            "return_as_file": False,
+        }
+
+        with httpx.Client(timeout=None) as client:
+            response = client.post(
+                base_url, files=files, data=options
+            )
+
+        return response.json()["document"]["md_content"]
 
     elif technique == 'easyocr_from_png':
         image_path = f"{pdf_path}.png"
@@ -199,7 +254,6 @@ def extract_markdown_from_pdf(pdf_path, technique):
 
     else:
         abort(400, description="Unsupported technique")
-
 
 if __name__ == '__main__':
     app.run(debug=True)

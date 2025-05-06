@@ -71,10 +71,10 @@
         <div class="col">
             <div class="card shadow-sm">
                 <div class="holds-the-iframe">
-                    <iframe src="{{ url_for('serve_converted_file', base_name=base_name, format='markdown', render='true', technique='easyocr') }}"></iframe>
+                    <iframe src="{{ url_for('serve_converted_file', base_name=base_name, format='markdown', render='true', technique='default_docling_serve') }}"></iframe>
                 </div>
                 <div class="card-body">
-                    <p class="card-text"><strong>Markdown</strong> with Docling Parse, <mark>force OCR, EasyOCR</mark> engine.</p>
+                    <p class="card-text"><strong>Markdown</strong> with the <mark>default Docling settings</mark>, Docling-Serve backend.</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="btn-group">
                             <button type="button" class="btn btn-sm btn-outline-secondary">Use this</button>
@@ -89,52 +89,16 @@
         <div class="col">
             <div class="card shadow-sm">
                 <div class="holds-the-iframe">
-                    <iframe src="{{ url_for('serve_converted_file', base_name=base_name, format='markdown', render='true', technique='easyocr_from_png') }}"></iframe>
+                    <iframe src="{{ url_for('serve_converted_file', base_name=base_name, format='markdown', render='true', technique='easyocr_docling_serve') }}"></iframe>
                 </div>
                 <div class="card-body">
-                    <p class="card-text"><strong>Markdown</strong> with Docling Parse, <mark>force OCR, EasyOCR</mark> engine, convert to <mark>PNG</mark>first.</p>
+                    <p class="card-text"><strong>Markdown</strong> with Docling Parse, <mark>force OCR, EasyOCR</mark> engine, Docling-Serve backend.</p>
                     <div class="d-flex justify-content-between align-items-center">
                         <div class="btn-group">
                             <button type="button" class="btn btn-sm btn-outline-secondary">Use this</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary">Download</button>
                         </div>
-                        <small class="text-body-secondary">ETA 19 secs</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card shadow-sm">
-                <div class="holds-the-iframe">
-                    <iframe></iframe>
-                </div>
-                <div class="card-body">
-                    <p class="card-text"><strong>Markdown</strong> using Ollama and <mark>granite3.2-vision</mark>, no Docling.</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Use this</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Download</button>
-                        </div>
-                        <small class="text-body-secondary">ETA 300 secs</small>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col">
-            <div class="card shadow-sm">
-                <div class="holds-the-iframe">
-                    <iframe></iframe>
-                </div>
-                <div class="card-body">
-                    <p class="card-text"><strong>Markdown</strong> with Docling using the <mark>smoldocling VLM</mark>.</p>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="btn-group">
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Use this</button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary">Download</button>
-                        </div>
-                        <small class="text-body-secondary">ETA 6000 secs</small>
+                        <small class="text-body-secondary">ETA 12 secs</small>
                     </div>
                 </div>
             </div>
