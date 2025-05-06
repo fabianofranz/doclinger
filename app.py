@@ -27,18 +27,14 @@ os.makedirs(output_folder, exist_ok=True)
 app.config['UPLOAD_FOLDER'] = upload_folder
 app.config['OUTPUT_FOLDER'] = output_folder
 
-
-@app.route('/', methods=['GET'])
-def upload_form():
-    return render_template('upload_form.html')
-
-
 ALLOWED_EXTENSIONS = {'pdf'}
-
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+@app.route('/', methods=['GET'])
+def upload_form():
+    return render_template('upload_form.html')
 
 @app.route('/upload', methods=['POST'])
 def upload_file():
@@ -69,7 +65,7 @@ def upload_file():
 
 
 @app.route('/converted/<base_name>')
-def serve_converted_file(base_name):
+async def serve_converted_file(base_name):
     # Get the format parameter from the URL query string (default to png if not provided)
     file_format = request.args.get('format', 'png')
     render = request.args.get('render', 'false').lower() == 'true'
@@ -95,7 +91,7 @@ def serve_converted_file(base_name):
         # Convert PDF text to Markdown using PyMuPDF (or any other library)
         markdown_filename = f"{base_name}.md"
         markdown_path = os.path.join(app.config['OUTPUT_FOLDER'], markdown_filename)
-        markdown_text = extract_markdown_from_pdf(file_path, technique)
+        markdown_text = await extract_markdown_from_pdf(file_path, technique)
         with open(markdown_path, 'w', encoding='utf-8') as f:
             f.write(markdown_text)
 
@@ -135,7 +131,7 @@ def serve_converted_file(base_name):
         abort(400, description="Unsupported format")
 
 
-def extract_markdown_from_pdf(pdf_path, technique):
+async def extract_markdown_from_pdf(pdf_path, technique):
     app.logger.info("Converting markdown with technique %s", technique)
 
     if technique == 'default':
@@ -153,19 +149,20 @@ def extract_markdown_from_pdf(pdf_path, technique):
 
         base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
         payload = {
-            "options": {
-                "to_formats": ["md"],
-                "image_export_mode": "embedded",
-                "do_ocr": True,
-                "abort_on_error": False,
-                "return_as_file": False,
-            },
+            "to_formats": ["md"],
+            "image_export_mode": "embedded",
+            "do_ocr": True,
+            "abort_on_error": False,
+            "return_as_file": False,
         }
 
-        with httpx.Client(timeout=None) as client:
-            response = client.post(
-                base_url, files=files, data={"parameters": json.dumps(payload)}
-            )
+        response = await httpx.AsyncClient(timeout=None).post(
+            base_url, files=files, data=payload
+        )
+
+        if response.status_code != 200:
+            print(response)
+            abort(500, description="Error converting with docling-serve backend")
 
         return response.json()["document"]["md_content"]
 
@@ -202,7 +199,7 @@ def extract_markdown_from_pdf(pdf_path, technique):
         }
 
         base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
-        options = {
+        payload = {
             "to_formats": ["md"],
             "image_export_mode": "embedded",
             "do_ocr": True,
@@ -213,10 +210,13 @@ def extract_markdown_from_pdf(pdf_path, technique):
             "return_as_file": False,
         }
 
-        with httpx.Client(timeout=None) as client:
-            response = client.post(
-                base_url, files=files, data=options
-            )
+        response = await httpx.AsyncClient(timeout=None).post(
+            base_url, files=files, data=payload
+        )
+
+        if response.status_code != 200:
+            print(response)
+            abort(500, description="Error converting with docling-serve backend")
 
         return response.json()["document"]["md_content"]
 
