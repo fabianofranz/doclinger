@@ -13,13 +13,14 @@ from docling.datamodel.pipeline_options import (
     EasyOcrOptions,
 )
 from docling.document_converter import DocumentConverter, PdfFormatOption
-from flask import Flask, request, render_template, send_from_directory, abort
+from flask import Flask, request, render_template, send_from_directory, abort, send_file
 from markdown import markdown as md_to_html
 from pdf2image import convert_from_path
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
 
+# TODO file upload structure must be improved for a multi-tenant environment
 upload_folder = tempfile.mkdtemp()
 output_folder = os.path.join(upload_folder, "converted")
 os.makedirs(output_folder, exist_ok=True)
@@ -91,7 +92,7 @@ async def serve_converted_file(base_name):
         # Convert PDF text to Markdown using PyMuPDF (or any other library)
         markdown_filename = f"{base_name}.md"
         markdown_path = os.path.join(app.config['OUTPUT_FOLDER'], markdown_filename)
-        markdown_text = await extract_markdown_from_pdf(file_path, technique)
+        markdown_text = await extract_markdown_from_pdf(file_path, base_name, technique)
         with open(markdown_path, 'w', encoding='utf-8') as f:
             f.write(markdown_text)
 
@@ -131,7 +132,7 @@ async def serve_converted_file(base_name):
         abort(400, description="Unsupported format")
 
 
-async def extract_markdown_from_pdf(pdf_path, technique):
+async def extract_markdown_from_pdf(pdf_path, base_name, technique):
     app.logger.info("Converting markdown with technique %s", technique)
 
     if technique == 'default':
@@ -149,7 +150,7 @@ async def extract_markdown_from_pdf(pdf_path, technique):
 
         base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
         payload = {
-            "to_formats": ["md"],
+            "to_formats": ["md", "json"],
             "image_export_mode": "embedded",
             "do_ocr": True,
             "abort_on_error": False,
@@ -161,10 +162,19 @@ async def extract_markdown_from_pdf(pdf_path, technique):
         )
 
         if response.status_code != 200:
-            print(response)
             abort(500, description="Error converting with docling-serve backend")
 
-        return response.json()["document"]["md_content"]
+        response_json = response.json()
+        markdown_content = response_json["document"]["md_content"]
+        json_content = response_json["document"]["json_content"]
+
+        json_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}_{technique}.json")
+
+        with open(json_path, 'w', encoding='utf-8') as f:
+            print("Writing", json_path)
+            json.dump(json_content, f)
+
+        return markdown_content
 
     elif technique == 'easyocr':
         pipeline_options = PdfPipelineOptions()
@@ -200,7 +210,7 @@ async def extract_markdown_from_pdf(pdf_path, technique):
 
         base_url = "http://0.0.0.0:5001/v1alpha/convert/file"
         payload = {
-            "to_formats": ["md"],
+            "to_formats": ["md", "json"],
             "image_export_mode": "embedded",
             "do_ocr": True,
             "force_ocr": True,
@@ -215,10 +225,17 @@ async def extract_markdown_from_pdf(pdf_path, technique):
         )
 
         if response.status_code != 200:
-            print(response)
             abort(500, description="Error converting with docling-serve backend")
 
-        return response.json()["document"]["md_content"]
+        markdown_content = response.json()["document"]["md_content"]
+        json_content = response.json()["document"]["json_content"]
+
+        json_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}_{technique}.json")
+
+        with open(json_path, 'w', encoding='utf-8') as f:
+            json.dump(json_content, f)
+
+        return markdown_content
 
     elif technique == 'easyocr_from_png':
         image_path = f"{pdf_path}.png"
@@ -254,6 +271,33 @@ async def extract_markdown_from_pdf(pdf_path, technique):
 
     else:
         abort(400, description="Unsupported technique")
+
+@app.route('/docling_json/<base_name>/<technique>')
+def serve_docling_json(base_name, technique):
+    json_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}_{technique}.json")
+
+    if not os.path.exists(json_path):
+        abort(404)
+
+    return send_file(json_path, mimetype='application/json')
+
+@app.route('/editor/<base_name>/<technique>')
+def docling_json_editor(base_name, technique):
+    json_path = os.path.join(app.config['UPLOAD_FOLDER'], f"{base_name}_{technique}.json")
+
+    if not os.path.exists(json_path):
+        abort(404)
+
+    with open(json_path, 'r') as file:
+        json_content = file.read()
+
+    return render_template(
+        'editor.html',
+        json_path=json_path,
+        json_content=json_content,
+        base_name=base_name,
+        technique=technique,
+    )
 
 if __name__ == '__main__':
     app.run(debug=True)
